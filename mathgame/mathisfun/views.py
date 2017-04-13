@@ -1,17 +1,22 @@
 from django.contrib.auth import login, authenticate
+from django import forms
 from django.shortcuts import render, redirect
-from django.template import Context, Template
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-import fractions
-import operator
+from operator import add, sub, mul, truediv
+from fractions import Fraction
 from .models import Results
+
 # Create your views here.
 
-
 Users = Results.objects.all()
+
+
+def index(request):
+    return render(request, 'mathisfun/login.html')
+
 
 def login_view(request):
     username = request.POST['username']
@@ -30,50 +35,57 @@ def login_view(request):
 
 @login_required
 def selection(request):
-
     return render(request, 'mathisfun/selection.html')
+
+OP_CHOICES = (
+        ('addition', '+'),
+        ('subtraction', '-'),
+        ('multiplication', '×'),
+        ('division', '÷'),
+    )
+
+
+class ChoiceForm(forms.Form):
+    operations = forms.ChoiceField(choices=OP_CHOICES)
 
 
 @login_required
 def solver(request):
-    ops = {'addition': operator.add,
-          'subtraction': operator.sub,
-          'multiplication': operator.mul,
-          'division': operator.truediv
-          }
-
-    #return HttpResponse("Inside solver")
-    # left_nom=1&left_denom=2&operator=addition&right_nom=1&right_denom=2
-    somevalue = request.GET
-    if len(somevalue) == 0:
-        return render(request, 'mathisfun/solver.html')
+    ops = {'addition': add,
+           'subtraction': sub,
+           'multiplication': mul,
+           'division': truediv
+           }
+    opdropdown = ChoiceForm()
+    context = {'myoperators': opdropdown}
+    getrequest = request.GET
+    if len(getrequest) == 0:
+        return render(request, 'mathisfun/solver.html', context)
     try:
-        for x in somevalue.keys():
-            if not somevalue[x]:
+        for x in getrequest.keys():
+            if not getrequest[x]:
                 raise AttributeError
-        op= somevalue.get('operator',None)
-        leftfraction = fractions.Fraction(int(somevalue.get('left_num', None)),int(somevalue.get('left_denom',None)))
-        rightfract = fractions.Fraction(int(somevalue.get('right_num', None)), int(somevalue.get('right_denom', None)))
-        print(leftfraction)
-        print(rightfract)
-        resultfract = ops[op](leftfraction,rightfract)
-        print(resultfract)
-        context = {'result_num':resultfract.numerator,'result_denom':resultfract.denominator,
-                   'left_num':leftfraction.numerator, 'left_denom':leftfraction.denominator,
-                   'right_num':rightfract.numerator,'right_denom':rightfract.denominator,
-                   'operator':op}
-        return render(request,'mathisfun/solver.html', context)
+        op = getrequest.get('operations', None)
+        leftfract = Fraction(int(getrequest.get('left_num', None)), int(getrequest.get('left_denom', None)))
+        rightfract = Fraction(int(getrequest.get('right_num', None)), int(getrequest.get('right_denom', None)))
+        resultfract = ops[op](leftfract, rightfract)
+        opdropdown.fields['operations'].initial = op
+        context = {'result_num': resultfract.numerator, 'result_denom': resultfract.denominator,
+                   'left_num': leftfract.numerator, 'left_denom': leftfract.denominator,
+                   'right_num': rightfract.numerator, 'right_denom': rightfract.denominator,
+                   'myoperators': opdropdown}
+        return render(request, 'mathisfun/solver.html', context)
     except AttributeError:
+        # TODO:Add Error message to user when they enter bad data.
         print('Error: Missing an input value')
     except ZeroDivisionError:
+        # TODO:Add Error message to user when they enter zero as denominator.
         print("Error: Denominator can't be zero!")
-
-
 
 
 @login_required
 def quizzer(request):
-    #return HttpResponse("Inside quizzer")
+    # return HttpResponse("Inside quizzer")
     return render(request, 'mathisfun/quizzer.html')
 
 
@@ -83,7 +95,6 @@ def results(request):
 
 
 class ChartData(APIView):
-
     authentication_classes = []
     permission_classes = []
 
@@ -92,10 +103,10 @@ class ChartData(APIView):
         # ***************************************************************
         # This needs to be replaced for the user that is logged in
         currentUser = "<userid>"
-        data.setdefault(currentUser,[5,4,6,5,20])
+        data.setdefault(currentUser, [5, 4, 6, 5, 20])
         # ***************************************************************
-        data.setdefault("user",currentUser)
-        sumScores = [0,0,0,0,0]
+        data.setdefault("user", currentUser)
+        sumScores = [0, 0, 0, 0, 0]
         for user in Results.objects.all():
             sumScores[0] = sumScores[0] + user.addition
             sumScores[1] = sumScores[1] + user.subtraction
@@ -111,9 +122,8 @@ class ChartData(APIView):
             sumScores[3] / count,
             sumScores[4] / count
         ]
-        data.setdefault("all",averageScores)
+        data.setdefault("all", averageScores)
         return Response(data)
-
 
 # TODO remove these. they are just for example purposes
 # def detail(request, question_id):
