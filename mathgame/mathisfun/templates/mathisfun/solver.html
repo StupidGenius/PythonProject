@@ -1,20 +1,35 @@
+<html>
+
+<body><center>
+{% load bootstrap3 %}
+{% bootstrap_css %}
+
 <h1>Solver</h1>
 
 
 <form>
-  LHS:
-  <input type="number" name="lhs" id="lhs">
-    Operator
-    <select name="operator">
+  <input type="number" name="left_num" id="left_num" value="{{left_num}}" class="input">
+    /
+    <input type="number" name="left_denom" id="left_denom" value="{{left_denom}}" class="input">
+
+    <select name="operator" class="btn btn-default dropdown-toggle" value="{{operator}}">
         <option value="addition">+</option>
         <option value="subtraction">-</option>
         <option value="multiplication">*</option>
         <option value="division">/</option>
     </select>
 
-  RHS:
-  <input type="number" name="rhs" id="rhs">
-    <input type="submit" value="Solve">
-    Result:
-</form>
+  <input type="number" name="right_num" id="right_num" value="{{right_num}}">
+    /
+    <input type="number" name="right_denom" id="right_denom" value="{{right_denom}}">
 
+    Result:
+    {{ result_num}}
+    /
+    {{ result_denom }}
+
+    <p><br><input type="submit" value="Solve" class="btn btn-primary"></p>
+</form>
+</center>
+</body>
+</html>

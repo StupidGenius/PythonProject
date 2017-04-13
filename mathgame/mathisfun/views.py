@@ -1,13 +1,15 @@
 from django.contrib.auth import login, authenticate
 from django.shortcuts import render, redirect
+from django.template import Context, Template
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.decorators import login_required
-
+from django.http import HttpResponse
+import fractions
+import operator
 from .models import Results
 # Create your views here.
 
-from django.http import HttpResponse
 
 Users = Results.objects.all()
 
@@ -34,8 +36,39 @@ def selection(request):
 
 @login_required
 def solver(request):
+    ops = {'addition': operator.add,
+          'subtraction': operator.sub,
+          'multiplication': operator.mul,
+          'division': operator.truediv
+          }
+
     #return HttpResponse("Inside solver")
-    return render(request, 'mathisfun/solver.html')
+    # left_nom=1&left_denom=2&operator=addition&right_nom=1&right_denom=2
+    somevalue = request.GET
+    if len(somevalue) == 0:
+        return render(request, 'mathisfun/solver.html')
+    try:
+        for x in somevalue.keys():
+            if not somevalue[x]:
+                raise AttributeError
+        op= somevalue.get('operator',None)
+        leftfraction = fractions.Fraction(int(somevalue.get('left_num', None)),int(somevalue.get('left_denom',None)))
+        rightfract = fractions.Fraction(int(somevalue.get('right_num', None)), int(somevalue.get('right_denom', None)))
+        print(leftfraction)
+        print(rightfract)
+        resultfract = ops[op](leftfraction,rightfract)
+        print(resultfract)
+        context = {'result_num':resultfract.numerator,'result_denom':resultfract.denominator,
+                   'left_num':leftfraction.numerator, 'left_denom':leftfraction.denominator,
+                   'right_num':rightfract.numerator,'right_denom':rightfract.denominator,
+                   'operator':op}
+        return render(request,'mathisfun/solver.html', context)
+    except AttributeError:
+        print('Error: Missing an input value')
+    except ZeroDivisionError:
+        print("Error: Denominator can't be zero!")
+
+
 
 
 @login_required
@@ -70,6 +103,7 @@ class ChartData(APIView):
             sumScores[3] = sumScores[3] + user.division
             sumScores[4] = sumScores[4] + user.total
         count = Users.count()
+
         averageScores = [
             sumScores[0] / count,
             sumScores[1] / count,
